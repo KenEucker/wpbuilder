@@ -9,7 +9,7 @@ include_once('classes.php');
 	
 function callStoredProcedure($proc, $data)
 {
-	global $mt_dbconn;
+	global $db_conn;
 	
 	$param_mask ="";
 	$param_count = count($data);
@@ -24,7 +24,7 @@ function callStoredProcedure($proc, $data)
 
 	//DEBUG: 
 	//echo $sql . '<br>';
-	$results = $mt_dbconn->getConn()->prepare($sql);
+	$results = $db_conn->getConn()->prepare($sql);
 	
 	foreach ($data as $key => $value) 
 	{
@@ -46,10 +46,10 @@ function callStoredProcedureAndFetchAll($proc, $data)
 
 function getView($viewName)
 {
-	global $mt_dbconn;
+	global $db_conn;
 	
 	$sql = "SELECT * FROM " . $viewName;
-	$results = $mt_dbconn->getConn()->prepare($sql);
+	$results = $db_conn->getConn()->prepare($sql);
 	$results->execute();
 	
 	return $results;
@@ -65,9 +65,9 @@ function getViewAndFetchAll($viewName)
 
 function getResults($sql)
 {
-	global $mt_dbconn;
+	global $db_conn;
 	
-	$results = $mt_dbconn->getConn()->prepare($sql);
+	$results = $db_conn->getConn()->prepare($sql);
 	$results->execute();
 	
 	return $results->fetchAll();
@@ -75,9 +75,9 @@ function getResults($sql)
 
 function executeQuery($query)
 {
-	global $mt_dbconn;
+	global $db_conn;
 	
-	$results = $mt_dbconn->getConn()->prepare($query);
+	$results = $db_conn->getConn()->prepare($query);
 	$results->execute();
 } 
 

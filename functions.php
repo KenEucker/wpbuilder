@@ -16,7 +16,14 @@ if (array_key_exists('HTTP', $_SERVER) && $_SERVER["HTTP"] == "on")
 	echo $domain; die();
 }
 
-function getFileFromUrl($url, $localfile)
+function getFileFromUrlAndSave($url, $localfile)
+{
+	$data = getFileFromUrl($url);
+
+	file_put_contents($localfile, $data);
+}
+
+function getFileFromUrl($url)
 {
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $url);
@@ -24,7 +31,12 @@ function getFileFromUrl($url, $localfile)
 	$data = curl_exec($ch);
 	curl_close($ch);
 
-	file_put_contents($localfile, $data);
+	return $data;
+}
+
+function makeGetRequest($url)
+{
+	return file_get_contents($url);
 }
 
 function writeToFile($filepath, $text)
@@ -170,15 +182,34 @@ function rrmdir($dir) {
 
 function unzipToFolder($zipfilename,$folder)
 {
+	return unzipToFolderSpecific($zipfilename,$folder,array());
+}
+
+function unzipToFolderSpecific($zipfilename,$folder,$include)
+{
 	$zip = new ZipArchive;
 
 	if ($zip->open($zipfilename) === TRUE) 
 	{
-		if ( !file_exists($folder) ) {
+		if ( !file_exists($folder) ) 
+		{
 		  mkdir ($folder, 0777);
-		 }
+		}
 
-	    $zip->extractTo($folder);
+		if(!is_writable($folder))
+		{
+			echo "Cannot write to folder: ".$folder."<br>";
+			return false;
+		}
+
+		if(count($include) > 0)
+		{
+			$zip->extractTo($folder, $include);
+		}
+		else
+		{
+			$zip->extractTo($folder);
+		}
 	    $zip->close();
 	    echo $zipfilename." extracted to ".$folder."<br>";
 	    return true;
@@ -325,7 +356,7 @@ function currentlyInWordpress()
 {
 	if (function_exists('in_the_loop') == true)
 	{
-		return in_the_loop();
+		return true;
 	}
 
 	return false;

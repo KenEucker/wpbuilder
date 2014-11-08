@@ -1,17 +1,14 @@
 <?php	
 
-	if(!file_exists('config.php'))
-	{
-		header('location:settings.php');
-	}
-
 	include_once("config.php");
 	include_once('classes.php');
 	include_once('functions.php');
 
-	global $mt_dbconn;
+	global $db_conn;
 
 	$page_info = new Page("deploy-wp",$sitename);
+	$page_info->getConfig();
+	
 	$page_info->setPages($pages, $admin_pages);
 	$page_info->changePageType("admin");
 	$page_info->title = "Deploy Wordpress";
@@ -19,19 +16,24 @@
 
 	$page_info->js = <<<js
 			$('#deploy').click(function(){
+
 				$('form').attr('action','?do=deploy').submit();
 			});
 
 			function hideShowUl(id)
 			{
-				if($('#wp_config').prev().attr('style') == "display: none;")
+				var checkbox = $("input[name='"+id+"']");
+
+				if(checkbox.prop("disabled") == false)
 				{
+					checkbox.prop( "disabled", true );
 					$('#'+id).hide();
 					$('#'+id).prev().hide();
 					$('#'+id).prev().prev().hide();
 				}
 				else
 				{
+					checkbox.prop("disabled", false);
 					$('#'+id).show();
 					$('#'+id).prev().show();
 					$('#'+id).prev().prev().show();
@@ -68,7 +70,7 @@ js;
 
 	if(file_exists("wp_latest.zip"))
 	{
-		$download_message = "A copy of wordpress has already been downloaded, checking this box will overwite and download the latest from wordpress servers.";
+		$download_message .= "A copy of wordpress has already been downloaded, checking the 'Download a copy...' box will download the latest from wordpress servers and overwrite the local copy.<br><br>";
 		$download_new = "";
 	}
 
@@ -88,15 +90,17 @@ js;
 
 	function setDefaults()
 	{
-		global $wp_deploy_config, $mt_dbconn ;
+		global $wp_deploy_config, $db_conn ;
 
 		$wp_deploy_config = array(
-			"dbhost" => $mt_dbconn->dbhostname,
-			"dbname" => $mt_dbconn->dbname,
-			"dbuser" => $mt_dbconn->dbuser,
-			"dbpass" => $mt_dbconn->dbpass,
-			"dbport" => $mt_dbconn->dbport,
-			"folder" => "wp/"
+			"dbhost" => $db_conn->dbhostname,
+			"dbname" => $db_conn->dbname,
+			"dbuser" => $db_conn->dbuser,
+			"dbpass" => $db_conn->dbpass,
+			"dbport" => $db_conn->dbport,
+			"folder" => "wp",
+			"sitename" => "Plugin Test",
+			"prefix" => "wp_"		
 			);
 	}
 
@@ -104,9 +108,20 @@ js;
 	{
 		$zipfilename = "wp_latest.zip";
 		$wordpress_latest = "https://wordpress.org/latest.zip";
-		getFileFromUrl($wordpress_latest, $zipfilename);
+		getFileFromUrlAndSave($wordpress_latest, $zipfilename);
 
 		return $zipfilename;
+	}
+
+	function writeDeployConfig($wp_deploy_config)
+	{
+		$config = "<?php\n";
+		
+		$config .= "\t".writeVariable('wp_deploy_config',$wp_deploy_config)."\n";
+
+		$config .= "\n?>";
+
+		writeToFile("deploy-wp-config.php", $config);
 	}
 
 	function writeWordpressConfig($wp_deploy_config)
@@ -116,18 +131,22 @@ js;
 				"##DBNAME##" => $wp_deploy_config["dbname"],
 				"##DBUSER##" => $wp_deploy_config["dbuser"],
 				"##DBPASS##" => $wp_deploy_config["dbpass"],
-				"##DBPORT##" => $wp_deploy_config["dbport"]
+				"##DBPORT##" => $wp_deploy_config["dbport"],
+				"##PREFIX##" => $wp_deploy_config["prefix"],
+				"##SALTS##" => makeGetRequest("https://api.wordpress.org/secret-key/1.1/salt/")
 			);
 
-		getFileAndReplaceThenWrite("templates/_wp-config.php","wp-config.php",$wp_deploy_config["folder"],$replace);
+		echo "Writing wordpress config file";
+		getFileAndReplaceThenWrite("templates/_wp-config.php","wp-config.php",$wp_deploy_config["folder"]."/",$replace);
 	}
 
 	function deployWordpress($zipfilename, $wp_deploy_config, $copy_config)
 	{
-		$success = unzipToFolder($zipfilename,$wp_deploy_config["folder"]);
+		$success = unzipToFolder($zipfilename,"./");
 		if($success)
 		{	
-			if($copy_config)
+			rename("wordpress", $wp_deploy_config["folder"]);
+			if($copy_config === true)
 			{
 				writeWordpressConfig($wp_deploy_config);
 			}
@@ -144,7 +163,7 @@ js;
 	{
 		?>
 		<span><?php echo $heading." (optional)"; ?></span>
-		<input type="checkbox" onclick="toggleUl('<?php echo $name; ?>');">
+		<input type="checkbox" name="<?php echo $name; ?>" value="<?php echo $name; ?>" onclick="toggleUl('<?php echo $name; ?>');">
 		<ul id="<?php echo $name; ?>">
 
 		<?php foreach($inputs as $input)
@@ -170,8 +189,25 @@ js;
 	
 			switch ($do) {
 				case 'deploy':
-					//downloadWordpress();
-					deployWordpress("wp_latest.zip",$wp_deploy_config, false);
+					$do_download = isset($_POST["download"]);
+					$do_delete = isset($_POST["delete"]);
+					$copy_config = isset($_POST["wp_config"]);
+
+					echo "delete: ".$do_delete."  download: ".$do_download."<br>";
+
+					if($do_download === true)
+					{
+						echo "Downloading wordpress";
+						downloadWordpress();
+					}
+					if($do_delete === true)
+					{
+						if(file_exists($wp_deploy_config["folder"]) === true)
+						{
+							rrmdir($wp_deploy_config["folder"]);
+						}
+					}
+					deployWordpress("wp_latest.zip",$wp_deploy_config, $copy_config);
 					echo "<a href='".$wp_deploy_config["folder"]."'>visit your new wp site</a><br>";
 					break;
 	
@@ -183,18 +219,25 @@ js;
 
 	function doSave()
 	{
+		global $wp_deploy_config;
+
 		if( isset($_POST) && !empty($_POST) )
 		{
 			$do = getQueryData("do");
 	
 			switch ($do) {
 				case 'save':
-					$folder = getPostData("folder");
-					$dbhost = getPostData("dbhost");
-					$dbname = getPostData("dbname");
-					$dbuser = getPostData("dbuser");
-					$dbpass = getPostData("dbpass");
-					$dbport = getPostData("dbport");
+					$wp_deploy_config["folder"] = getPostData("folder");
+					$wp_deploy_config["dbhost"] = getPostData("dbhost");
+					$wp_deploy_config["dbname"] = getPostData("dbname");
+					$wp_deploy_config["dbuser"] = getPostData("dbuser");
+					$wp_deploy_config["dbpass"] = getPostData("dbpass");
+					$wp_deploy_config["dbport"] = getPostData("dbport");
+
+					$wp_deploy_config["folder"] = getPostData("folder");
+					$wp_deploy_config["prefix"] = getPostData("prefix");
+
+					writeDeployConfig($wp_deploy_config);
 					break;
 	
 				default:
@@ -222,24 +265,27 @@ js;
 								?>
 							</ul>
 							<?php
-								$db_options = array(
-									0=>array("name"=>"Host","id"=>"dbhost","var"=>$wp_deploy_config["dbhost"]),
-									1=>array("name"=>"Name","id"=>"dbname","var"=>$wp_deploy_config["dbname"]),
-									2=>array("name"=>"User","id"=>"dbuser","var"=>$wp_deploy_config["dbuser"]),
-									3=>array("name"=>"Pass","id"=>"dbpass","var"=>$wp_deploy_config["dbpass"]),
-									4=>array("name"=>"Port","id"=>"dbport","var"=>$wp_deploy_config["dbport"])
-									);
-								buildConditionalUl("Automatic Database Configuration","db_config",$db_options);
-								echo "<br>";
 								$wp_options = array(
-									0=>array("name"=>"Sitename","id"=>"sitename","var"=>"")
+									1=>array("name"=>"Table Prefix","id"=>"prefix","var"=>$wp_deploy_config["prefix"]),
+									2=>array("name"=>"Host","id"=>"dbhost","var"=>$wp_deploy_config["dbhost"]),
+									3=>array("name"=>"Name","id"=>"dbname","var"=>$wp_deploy_config["dbname"]),
+									4=>array("name"=>"User","id"=>"dbuser","var"=>$wp_deploy_config["dbuser"]),
+									5=>array("name"=>"Pass","id"=>"dbpass","var"=>$wp_deploy_config["dbpass"]),
+									6=>array("name"=>"Port","id"=>"dbport","var"=>$wp_deploy_config["dbport"])
 									);
-								buildConditionalUl("Automatic Wordpress Configuration","wp_config",$wp_options);
+								buildConditionalUl("Genereate Wordpress Configuration","wp_config",$wp_options);
+								#buildConditionalUl("Automatic Database Configuration","db_config",$db_options);
 							?>
 							<br>
-							<span>Download a copy of the latest release of wordpress <input type="checkbox" <?php echo $download_new; ?>></span>
-							<br>
-							<span class="lbl-info"><?php echo $download_message; ?></span>
+							<?php if(file_exists($wp_deploy_config["folder"]) === true)
+								{
+									echo "<span id='delete'>Delete Existing Folder <input type='checkbox' name='delete' value='delete'></span><br>";
+									$download_message .= "A folder with the same name already exists, by checking the 'Delete Folder' box this installation will overwrite the old. Leaving the box unchecked will add a number to the new installation path folder.<br><br>";
+								}?>
+							<span>Download a copy of the latest release of wordpress <input type="checkbox" name="download"  value='download'<?php echo $download_new; ?>></span>
+							<p>
+							<span class="label label-info"><?php echo $download_message; ?></span>
+							</p>
 						</div>
 						<div id="buttons">
 							<a id="deploy" class="btn btn-info" style="float: right;display:inline-block;"><span class="glyphicon "></span><span>Deploy to <?php echo $dir.$wp_deploy_config["folder"]; ?></span></a>

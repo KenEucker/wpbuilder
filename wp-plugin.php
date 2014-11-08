@@ -1,11 +1,5 @@
 <?php	
 
-	if(!file_exists('config.php'))
-	{
-		header('location:settings.php');
-	}
-
-	include_once("config.php");
 	include_once("classes.php");
 	include_once("functions.php");
 
@@ -26,6 +20,8 @@
 	}
 
 	$page_info = new Page("wp-plugin", $sitename);
+	$page_info->getConfig();
+
 	$page_info->title = "Tracker - Get Wordpress Plugin ";
 	$page_info->description = "Generate and download a new copy of the plugin";
 	$page_info->meta = "tracker wordpress plugin download";
@@ -150,7 +146,8 @@ LICENSE;
 
 		foreach($wp_plugin_config["admin_files"] as $name => $file)
 		{
-			$wp_files_replace["##PLUGIN_ADMIN_MENUS##"] .= "add_submenu_page(\$mainfile, '$name', '$name', \$menu_type, \$plugin_dir.'/$file' );\n";
+			$name = substr(ucfirst($file), 0, strpos($file, '.'));
+			$wp_files_replace["##PLUGIN_ADMIN_MENUS##"] .= "\tadd_submenu_page(\$mainfile, '$name', '$name', \$menu_type, \$plugin_dir.'/$file' );\n";
 		}
 
 		return $wp_files_replace;
@@ -182,7 +179,7 @@ LICENSE;
 		  mkdir ($destination_folder."js/", 0777);
 		 }
 
-		 getFileAndReplaceThenWrite("templates/_wp-plugin-config.php","config.php",$destination_folder,$wp_files_replace);
+		 getFileAndReplaceThenWrite("templates/_wp_config.php","config.php",$destination_folder,$wp_files_replace);
 		 getFileAndReplaceThenWrite("templates/_wp-plugin.php",$wp_config["name"]."-plugin.php",$destination_folder,$wp_files_replace);
 		 getFileAndReplaceThenWrite("templates/_wp-settings.php",$wp_config["name"]."-settings.php",$destination_folder,$wp_files_replace);
 

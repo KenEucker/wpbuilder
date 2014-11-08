@@ -108,13 +108,7 @@ class ##CLASSNAME## {
 		$mainfile = $plugin_dir.'/##SHORTNAME_PLURAL##.php';
 		$menu_type = "edit_others_posts";
   		add_menu_page( '##BIGSHORTNAME_PLURAL##', '##BIGSHORTNAME_PLURAL##', $menu_type, $mainfile ); 
-
-  		///TODO: add foreach that compiles this from a variable
-	    /*add_submenu_page($mainfile, 'Targets', 'Targets', $menu_type, $plugin_dir.'/targets.php' );
-	    add_submenu_page($mainfile, 'Actions', 'Actions', $menu_type, $plugin_dir.'/actions.php' );
-	    add_submenu_page($mainfile, 'Types', 'Types', $menu_type, $plugin_dir.'/types.php' );
-	    add_submenu_page($mainfile, 'Sources', 'Sources', $menu_type, $plugin_dir.'/sources.php' );*/
-	    ##PLUGIN_ADMIN_MENUS##
+	##PLUGIN_ADMIN_MENUS##
 	}
 
 	function create_posttypes()

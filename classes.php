@@ -7,15 +7,23 @@ class Page
 	public $js_files_order, $css_files_order, $copyright;
 	private $page_type, $page_type_files;
 
-	public function __construct($name, $sitename)
+	public function __construct($name, $get_config)
 	{
+		global $sitename;
+		$this->basepath = $this->getBasePath();	
+
+		if($get_config === true)
+		{
+			$this->getConfig();
+		}
+		
 		$this->sitename = $sitename;
 		$this->name = $name;
 		$this->title = $sitename." - ".$name;
 		$this->description = "a description of my website";
 		$this->meta = $sitename." - ".$name;
 		$this->keywords = array(); 
-		$this->author ="Epic720";
+		$this->author ="Author";
 		$this->favicon = "";
 		$this->breadcrumb = array( 
 			0=>array( 
@@ -29,11 +37,24 @@ class Page
 		$this->css_files = array("css/bootstrap.min.css","css/style.css");
 		$this->js_files = array("js/jquery.js","js/bootstrap.min.js","js/html5shiv.js","js/code.js");
 		$this->js = "";
-		$this->basepath = ".";	
 		$this->nav_pages = array();
 		$this->admin_pages = array();
 		$this->copyright = "Your Company 2014. All Rights Reserved";
 		$this->changePageType("");
+	}
+
+	function getBasePath()
+	{
+		if(function_exists('in_the_loop') == true)
+		{
+			$plugin_path = plugin_dir_path( __FILE__ );
+			return $plugin_path;
+		}
+		else
+		{
+			return ".";
+		}
+
 	}
 
 	function changePageType($type)
@@ -149,6 +170,29 @@ metaHtml;
 		}
 
 		return $out;
+	}
+
+	public function getConfig()
+	{
+		global $db_conn, $sitename, $pages, $admin_pages, $hidden_admin_pages, $offline_pages;
+
+		$config_location = $this->basepath.'/config.php';
+
+		if(!file_exists($config_location))
+		{
+			if(function_exists('in_the_loop') == true)
+			{
+				echo "Cannot find configuration file at ".$config_location;
+			}
+			else
+			{
+				header('location:settings.php');
+			}
+			
+			die();
+		}
+
+		include_once($config_location);
 	}
 
 	public function getCssFiles()
@@ -441,7 +485,7 @@ admin;
 
 			default:
 			case "basic":
-				$basicHtml = $this->body;
+				$basicHtml = "";
 				$beforeHtml .= $basicHtml;
 			break;
 		}
@@ -671,7 +715,7 @@ class WordpressPage extends Page
 	}
 }
 
-class TrackingDatabase
+class DatabaseConnection
 {
 	public $dbhostname,$dbport,$dbip,$dbuser,$dbpass,$dbname;
 	public $error;

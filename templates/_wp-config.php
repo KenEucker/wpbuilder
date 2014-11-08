@@ -42,14 +42,7 @@ define('DB_COLLATE', '');
  *
  * @since 2.6.0
  */
-define('AUTH_KEY',         's*<C|ZD81kolg7BLi:?~X[c,7:X`Dg?=u(,O7^oFSXC(h-b8`OquA4_)~x_1Fc>u');
-define('SECURE_AUTH_KEY',  'N:UhX n6/j-yL8ncLZ<-e(<~0Ko+*lps!6g;[%vq5}>pf$%6kcw22Zq;9z9=--@>');
-define('LOGGED_IN_KEY',    'sa,#FMY4A.,s_VdK>e6`9f#n-u _:1--_G3~dx.^&X=,(S;,B|@M(ka-|MyAeI^|');
-define('NONCE_KEY',        'OwiY2?R=u`86-VN}/-`co!4b3LIJ/~5;ETus|.V(ACdA[-0FU^@ O,JpL5>$CKA-');
-define('AUTH_SALT',        'i@I,[v&HMA>iYZ;g<v %+-eQ,N3*a+^Z~x+Syv{t;t?Xf+ %+7-#|QKmy}g.h]+r');
-define('SECURE_AUTH_SALT', 'J,.*|5Z^NdjT.6(}h33CXy}|97$d~ri]Zc|;sXo0?Z]8dGMP_[U/hOD@Ds[{J.3:');
-define('LOGGED_IN_SALT',   'pQ++ 601q) d3S6ie2>uAk:n@*=QII^zK[~IDVsMyn_!kx6zF@vi2i{ZN) +,G;r');
-define('NONCE_SALT',       'FJzCqNUiwx1%1a(J8Az;1]u.j&$BlfyH(zWaXQ@{WnvF|]mfnV%ho ~s;I^]_(mT');
+##SALTS##
 
 /**#@-*/
 
@@ -59,7 +52,7 @@ define('NONCE_SALT',       'FJzCqNUiwx1%1a(J8Az;1]u.j&$BlfyH(zWaXQ@{WnvF|]mfnV%h
  * You can have multiple installations in one database if you give each a unique
  * prefix. Only numbers, letters, and underscores please!
  */
-$table_prefix  = 'wp_';
+$table_prefix  = '##PREFIX##';
 
 /**
  * For developers: WordPress debugging mode.

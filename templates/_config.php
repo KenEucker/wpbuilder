@@ -3,18 +3,18 @@
 	include_once('functions.php');
 	session_start();
 
-	global $mt_dbconn;
+	global $db_conn;
 	$offline = false;
 
 	##SITE SETTINGS##
 
-	if (class_exists("TrackingDatabase") && !$mt_dbconn) {
-	    $mt_dbconn = new TrackingDatabase('##DBHOST##','##DBNAME##','##DBUSER##','##DBPASS##','##DBPORT##');	
+	if (class_exists("DatabaseConnection") && !$db_conn) {
+	    $db_conn = new DatabaseConnection('##DBHOST##','##DBNAME##','##DBUSER##','##DBPASS##','##DBPORT##');	
 	}	
 
 	$offline = in_array(basename($_SERVER['SCRIPT_NAME']), $offline_pages);
 
-	if(!$mt_dbconn || (!$mt_dbconn->checkConnection()))
+	if(!$db_conn || (!$db_conn->checkConnection()))
 	{
 		if(!$offline)
 		{

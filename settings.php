@@ -2,7 +2,7 @@
 
 	include_once('functions.php');
 
-	global $mt_dbconn,$pages,$admin_pages,$hidden_admin_pages;
+	global $db_conn,$pages,$admin_pages,$hidden_admin_pages;
 
 
 	if(file_exists("config.php"))
@@ -20,7 +20,7 @@
 
 	function setDefaults()
 	{
-		global $mt_dbconn,$pages,$admin_pages,$offline_pages,$hidden_admin_pages,$sitename;
+		global $db_conn,$pages,$admin_pages,$offline_pages,$hidden_admin_pages,$sitename;
 
 		$sitename = "Site";
 		$pages = 
@@ -38,10 +38,10 @@
 		$offline_pages = 
 		array("0"=>"settings.php","1"=>"wp-plugin.php");
 		
-		$mt_dbconn = new TrackingDatabase('localhost','dbname','dbuser','dbpass','3306');	
+		$db_conn = new DatabaseConnection('localhost','dbname','dbuser','dbpass','3306');	
 	}
 
-	$page_info = new Page("Settings", $sitename);
+	$page_info = new Page("Settings", false);
 	$page_info->changePageType("admin");
 	$page_info->setPages($pages, $admin_pages);
 
@@ -111,9 +111,9 @@ js;
 
 	function writeSettingsToConfigFile()
 	{
-		global $mt_dbconn,$pages,$admin_pages,$hidden_admin_pages,$offline_pages;
+		global $db_conn,$pages,$admin_pages,$hidden_admin_pages,$offline_pages;
 
-		$code = writeDatabaseConnectionCode($mt_dbconn);
+		$code = writeDatabaseConnectionCode($db_conn);
 		$code = str_replace("##SITE SETTINGS##", writeSiteSettings($pages, $admin_pages, $hidden_admin_pages,$offline_pages), $code);
 
 		writeToFile("config.php",$code);
@@ -188,7 +188,7 @@ js;
 
 	function setSettingsFromPostValues()
 	{
-		global $mt_dbconn, $admin_pages, $pages, $sitename;
+		global $db_conn, $admin_pages, $pages, $sitename;
 
 		$sitename = getPostData("sitename");
 		
@@ -216,7 +216,7 @@ js;
 			$count = $count + 1;
 		}
 
-		return $mt_dbconn->changeResetConn(getPostData('dbhostname'),getPostData('dbname'),getPostData('dbuser'),getPostData('dbpass'),getPostData('dbport'));
+		return $db_conn->changeResetConn(getPostData('dbhostname'),getPostData('dbname'),getPostData('dbuser'),getPostData('dbpass'),getPostData('dbport'));
 	}
 
 	if( isset($_POST) && !empty($_POST) )
@@ -227,13 +227,14 @@ js;
 			case 'save':
 					$db_connection = setSettingsFromPostValues();
 					writeSettingsToConfigFile();
+					header('location:settings.php');
 				break;
 			case 'checkdb':
 					$response = array();
 					try
 					{
 						$response["success"] = setSettingsFromPostValues();
-						$response["error"] = $mt_dbconn->error;
+						$response["error"] = $db_conn->error;
 					}
 					catch(Exception $e)
 					{
@@ -246,15 +247,15 @@ js;
 				break;
 
 			default:
-				$db_connection =  $mt_dbconn->checkConnection();
+				$db_connection =  $db_conn->checkConnection();
 				break;
 		}
 	}
 	else
 	{
-		if($mt_dbconn)
+		if($db_conn)
 		{
-			$db_connection =  $mt_dbconn->checkConnection();
+			$db_connection =  $db_conn->checkConnection();
 		}
 		else 
 		{
@@ -267,7 +268,7 @@ js;
 		$db_button = "Database Connection Failed";
 		$db_icon = "glyphicon-remove";
 		$db_button_class = "btn-danger";
-		$db_message = isset($mt_dbconn) ? $mt_dbconn->error : "No Database Connection Defined.";
+		$db_message = isset($db_conn) ? $db_conn->error : "No Database Connection Defined.";
 	}
 
 
@@ -286,11 +287,11 @@ bodyHTML;
 		$page_info->body .= buildLi1("Sitename", "sitename", $sitename);
 
 		$page_info->body .= "</ul><br>Database<br><ul id='database_info'>";
-		$page_info->body .= buildLi1("Host", "dbhostname", $mt_dbconn->dbhostname);
-		$page_info->body .= buildLi1("Name", "dbname",  $mt_dbconn->dbname);
-		$page_info->body .= buildLi1("User", "dbuser",  $mt_dbconn->dbuser);
-		$page_info->body .= buildLi1("Pass", "dbpass",  $mt_dbconn->dbpass);
-		$page_info->body .= buildLi1("Port", "dbport",  $mt_dbconn->dbport);
+		$page_info->body .= buildLi1("Host", "dbhostname", $db_conn->dbhostname);
+		$page_info->body .= buildLi1("Name", "dbname",  $db_conn->dbname);
+		$page_info->body .= buildLi1("User", "dbuser",  $db_conn->dbuser);
+		$page_info->body .= buildLi1("Pass", "dbpass",  $db_conn->dbpass);
+		$page_info->body .= buildLi1("Port", "dbport",  $db_conn->dbport);
 
 				
 		$page_info->body .= <<<bodyHTML
