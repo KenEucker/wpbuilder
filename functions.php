@@ -4,21 +4,53 @@ include_once("classes.php");
 
 $debug = array('message'=>'', 'errors'=>array());
 $dir = str_replace(basename($_SERVER['PHP_SELF']), '', $_SERVER['PHP_SELF']); // make a note of the current working directory, relative to root. 
-$whoops = null;
-$whoops_handler = null;
-$whoops_json_handler = null;
 
-if (array_key_exists('HTTP', $_SERVER) && $_SERVER["HTTP"] == "on") 
+if (isset($_SERVER)) 
 {
-	$dir = str_replace(basename($_SERVER['PHP_SELF']), '', $_SERVER['PHP_SELF']); // make a note of the current working directory, relative to root. 
-	$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";	// http or https
-	$domain = $_SERVER['HTTP_HOST'];	// current domain name
-	echo $domain; die();
+	$base_dir  = __DIR__; // Absolute path to your installation, ex: /var/www/mywebsite
+	$doc_root  = preg_replace("!{$_SERVER['SCRIPT_NAME']}$!", '', $_SERVER['SCRIPT_FILENAME']); # ex: /var/www
+	$base_url  = preg_replace("!^{$doc_root}!", '', $base_dir); # ex: '' or '/mywebsite'
+	$protocol  = empty($_SERVER['HTTPS']) ? 'http' : 'https';
+	$port      = $_SERVER['SERVER_PORT'];
+	$disp_port = ($protocol == 'http' && $port == 80 || $protocol == 'https' && $port == 443) ? '' : ":$port";
+	$domain    = $_SERVER['SERVER_NAME'];
+	$full_url  = "$protocol://{$domain}{$disp_port}{$base_url}"; # Ex: 'http://example.com', 'https://example.com/mywebsite', etc.
+}
+
+function getPathToHere($file)
+{
+	global $base_url;
+
+	$start = strpos($file, $base_url);
+	$end = strrpos($file, "/");
+	$count = $end - $start;
+
+	return substr($file, $start, $count);
+}
+
+function get_client_ip() 
+{
+    $ipaddress = '';
+    if (getenv('HTTP_CLIENT_IP'))
+        $ipaddress = getenv('HTTP_CLIENT_IP');
+    else if(getenv('HTTP_X_FORWARDED_FOR'))
+        $ipaddress = getenv('HTTP_X_FORWARDED_FOR');
+    else if(getenv('HTTP_X_FORWARDED'))
+        $ipaddress = getenv('HTTP_X_FORWARDED');
+    else if(getenv('HTTP_FORWARDED_FOR'))
+        $ipaddress = getenv('HTTP_FORWARDED_FOR');
+    else if(getenv('HTTP_FORWARDED'))
+       $ipaddress = getenv('HTTP_FORWARDED');
+    else if(getenv('REMOTE_ADDR'))
+        $ipaddress = getenv('REMOTE_ADDR');
+    else
+        $ipaddress = 'UNKNOWN';
+    return $ipaddress;
 }
 
 function getFileFromUrlAndSave($url, $localfile)
 {
-	$data = getFileFromUrl($url);
+	$data = fopen($url, 'r');
 
 	file_put_contents($localfile, $data);
 }
@@ -218,6 +250,48 @@ function unzipToFolderSpecific($zipfilename,$folder,$include)
 	{
 	    echo "unable to open: ".$zipfilename."<br>";
 	    return false;
+	}
+}
+
+function copyFolderToFolder($from,$to,$destination_folder)
+{
+	$full_destination = $destination_folder."/".$to;	
+
+	echo "Creating folder ".$full_destination."<br>";
+	mkdir ($full_destination, 0777);
+
+	// Create recursive directory iterator
+	$files = new RecursiveIteratorIterator(
+	    new RecursiveDirectoryIterator($from),
+	    RecursiveIteratorIterator::LEAVES_ONLY
+	);
+
+	foreach ($files as $name => $file) 
+	{
+		    // Get real path for current file
+		$filePath = $file->getRealPath();
+		if(!is_dir($file))
+		{	
+			if(!(substr($file->getFilename(), 0, 1) == '.'))
+			{
+				$source = $file->getPath()."/".$file->getFilename();
+				$dest = $destination_folder."/".$to."/".str_replace($from . '/', '', $source);
+
+				echo "Copying from $source to $dest"."<br>";
+			    copy($source, $dest);
+			}
+		}
+		else
+		{
+
+			$new_dir = $destination_folder."/".$file->getPath();
+
+			if(!file_exists($new_dir))
+			{
+				echo "Creating new folder ".$new_dir." from $file <br>";
+				mkdir($new_dir);
+			}
+		}
 	}
 }
 
@@ -434,6 +508,11 @@ function getFileWriteFile($from,$to,$destination_folder)
 	umask();
 	$contents = @file_get_contents($from);
 	$destination = $destination_folder.$to;
+
+	if(!file_exists($destination_folder))
+	{
+		mkdir($destination_folder, 0777);
+	}
 
 	if(is_writable($destination_folder))
 	{

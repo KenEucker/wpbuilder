@@ -1,10 +1,7 @@
 <?php
 
-if(file_exists("config.php"))
-{	
-	include_once('config.php');
-}
 
+include_once('config.php');
 include_once('classes.php');
 	
 function callStoredProcedure($proc, $data)

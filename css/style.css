@@ -158,3 +158,11 @@
 {
     padding-top: 50px !important;
 }
+.options
+{
+  /*width:420px;*/
+}
+.options .label-info
+{
+  white-space:normal !important;
+}

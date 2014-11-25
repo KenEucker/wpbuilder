@@ -168,7 +168,7 @@ LICENSE;
 		return "<li><span class='name'>$name</span><input type='text' name='$id' value='".outputArrayToText($var)."'></li>";
 	}
 
-	function create_plugin_files($wp_config,$wp_files_replace)
+	function create_plugin_files($wp_config,$wp_files_replace,$use_existing_plugin,$use_existing_settings)
 	{
 		global $page_info;
 
@@ -180,8 +180,23 @@ LICENSE;
 		 }
 
 		 getFileAndReplaceThenWrite("templates/_wp_config.php","config.php",$destination_folder,$wp_files_replace);
-		 getFileAndReplaceThenWrite("templates/_wp-plugin.php",$wp_config["name"]."-plugin.php",$destination_folder,$wp_files_replace);
-		 getFileAndReplaceThenWrite("templates/_wp-settings.php",$wp_config["name"]."-settings.php",$destination_folder,$wp_files_replace);
+		 if(!$use_existing_plugin)
+		 {
+		 	getFileAndReplaceThenWrite("templates/_wp-plugin.php",$wp_config["name"]."-plugin.php",$destination_folder,$wp_files_replace);
+		 }
+		 else
+		 {
+		 	getFileWriteFile($wp_config["name"]."-plugin.php",$wp_config["name"]."-plugin.php",$destination_folder);
+		 }
+		 if(!$use_existing_settings)
+		 {
+			 getFileAndReplaceThenWrite("templates/_wp-settings.php",$wp_config["name"]."-settings.php",$destination_folder,$wp_files_replace);
+		 }
+		 else
+		 {
+			 getFileWriteFile($wp_config["name"]."-settings.php",$wp_config["name"]."-settings.php",$destination_folder);
+
+		 }
 
 		foreach($wp_config["base_files"] as $filename)
 		{
@@ -304,13 +319,22 @@ LICENSE;
 				case "build":
 					try
 					{
+						$generate_plugin = $generate_settings = true;
+						$use_existing_plugin = isset($_POST["use_existing_plugin"]);
+						$use_existing_settings = isset($_POST["use_existing_settings"]);
+						$zip_folder = isset($_POST["zip_folder"]);
+						$delete_folder = isset($_POST["delete_folder"]);
+						$include_thirdparty = isset($_POST["include_thirdparty"]);
+
 						$response .= "Building wordpress plugin ".$wp_plugin_config["name"]."<br>";
 
 						$wp_files_replace = getConfigFilesReplace($wp_plugin_config);
-						create_plugin_files($wp_plugin_config,$wp_files_replace);
+						create_plugin_files($wp_plugin_config,$wp_files_replace,$use_existing_plugin,$use_existing_settings);
 
-						$zip_folder = getPostData("zip_folder") == true ? true : false;
-						$delete_folder = getPostData("delete_folder") == true ? true : false;
+						if($include_thirdparty)
+						{
+							copyFolderToFolder("thirdparty","thirdparty",$wp_plugin_config["name"]);
+						}
 						if($zip_folder)
 						{
 							$file = zipFolder($page_info->basepath."/".$wp_plugin_config["name"],$wp_plugin_config["name"], $delete_folder, true);
@@ -336,6 +360,13 @@ LICENSE;
 	#echo $page_info->getHeader(true,true);
 	doSave($wp_plugin_config);
 	doBuild($wp_plugin_config); 
+
+
+	$existing_plugin = "";
+	$existing_plugin_settings = "";
+	$plugin_filename = $wp_plugin_config["name"]."-plugin.php";
+	$plugin_settings_filename = $wp_plugin_config["name"]."-settings.php";
+	
 
 	$page_info->body = <<<html
 	<form method="post" action="?do=save" id="buildForm">
@@ -383,10 +414,28 @@ html;
 				
 	$page_info->body .= <<<html
 		<ul>
+			<li><label for="include_thirdparty">Include thirdparty folder</label><input type='checkbox' name='include_thirdparty' checked></li>
 			<li><label for="zip_folder">Package folder after creation</label><input type='checkbox' name='zip_folder' value='true' onclick='toggleLi("#delete");'></li>
 			<li id="delete"><label for="delete_folder">Delete folder after packaging</label><input type='checkbox' name='delete_folder' value='true'></li>
 		</ul>
 		</div>
+			<div class="options">
+html;
+
+	if(file_exists($plugin_filename))
+	{
+		$existing_plugin = "<span>Use existing plugin file <input type='checkbox' name='use_existing_plugin' value='use_existing_plugin' checked></span><br>";
+		$existing_plugin .= "<span class='label label-info'>A plugin file with the name ".$plugin_filename." already exists, click the box to use the file found. If unchecked, a new plugin file will be generated.</span><br>";
+	}
+	if(file_exists($plugin_settings_filename))
+	{
+		$existing_plugin_settings =  "<span>Use existing settings file <input type='checkbox' name='use_existing_settings' value='use_existing_settings' checked></span><br>";
+		$existing_plugin_settings .= "<span class='label label-info'>A plugin settings file with the name ".$plugin_settings_filename." already exists, click the box to use the file found. If unchecked, a new plugin settings file will be generated.</span><br>";
+	}
+
+	$page_info->body .= <<<html
+				 $existing_plugin $existing_plugin_settings 
+			</div>
 			<div id="buttons">
 				<a id="build" class="btn btn-info" style="float: right;display:inline-block;"><span class="glyphicon "></span><span>Build plugin from site code</span></a>
 				<button type="submit" id="save" class="btn btn-success" style="float: right;display:inline-block;"><span class="glyphicon "></span> Save</button>

@@ -13,11 +13,13 @@
 		}
 		if(!$db_conn) 
 		{
-			$host = $##CLASSNAME##->settings->get_field_value('##PLUGIN_NAME##_db_host');
-			$name = $##CLASSNAME##->settings->get_field_value('##PLUGIN_NAME##_db_name');
-			$user = $##CLASSNAME##->settings->get_field_value('##PLUGIN_NAME##_db_user');
-			$pass = $##CLASSNAME##->settings->get_field_value('##PLUGIN_NAME##_db_pass');
-			$port = $##CLASSNAME##->settings->get_field_value('##PLUGIN_NAME##_db_port');
+			$db_options = get_option('metrics_tracker_options');
+			
+			$host = $db_options['##PLUGIN_NAME##_db_host'];
+			$name = $db_options['##PLUGIN_NAME##_db_name'];
+			$user = $db_options['##PLUGIN_NAME##_db_user'];
+			$pass = $db_options['##PLUGIN_NAME##_db_pass'];
+			$port = $db_options['##PLUGIN_NAME##_db_port'];
 		    $db_conn = new DatabaseConnection($host,$name,$user,$pass,$port);	
 		}
 	}	
